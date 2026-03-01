@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Matcher - Live Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0077b5 0%, #000000 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .api-config {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .api-config h3 {
+            color: #92400e;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .api-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .search-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #0077b5;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .names-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        @media (max-width: 768px) {
+            .names-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .name-input {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .name-input:focus {
+            outline: none;
+            border-color: #0077b5;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+            padding: 20px;
+            background: #f3f4f6;
+            border-radius: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .filter-section h3 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: #374151;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .checkbox-item:hover {
+            border-color: #0077b5;
+            background: #eff6ff;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .domain-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag .remove {
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.6;
+        }
+
+        .tag-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 16px;
+            background: #0077b5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover:not(:disabled) {
+            background: #005885;
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #9ca3af;
+        }
+
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .status.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+
+        .status.info {
+            display: block;
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .results-container {
+            display: none;
+        }
+
+        .results-header {
+            color: white;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .profile-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #0077b5;
+        }
+
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 16px;
+        }
+
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 4px;
+        }
+
+        .profile-headline {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .profile-location {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .linkedin-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #0077b5;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .profile-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        @media (max-width: 640px) {
+            .profile-details {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .detail-section h4 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            letter-spacing: 0.05em;
+        }
+
+        .education-item, .domain-item {
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .education-level {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .level-bsc { background: #dbeafe; color: #1e40af; }
+        .level-ms { background: #d1fae5; color: #065f46; }
+        .level-phd { background: #fce7f3; color: #9d174d; }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-card {
+            background: #fee2e2;
+            border-left-color: #dc2626;
+            padding: 16px;
+            border-radius: 8px;
+            color: #991b1b;
+            margin-bottom: 20px;
+        }
+
+        .info-note {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="api-config">
+            <h3>⚠️ API Configuration Required</h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+                To search real LinkedIn data legally, you need API keys from these services:
+            </p>
+            <div class="api-inputs">
+                <div class="input-group">
+                    <label>Google Custom Search API Key (Free)</label>
+                    <input type="text" id="googleApiKey" placeholder="AIzaSy..." value="">
+                    <small style="color: #666; font-size: 0.8rem;">Get from Google Cloud Console</small>
+                </div>
+                <div class="input-group">
+                    <label>Google Search Engine ID (Free)</label>
+                    <input type="text" id="searchEngineId" placeholder="0123..." value="">
+                    <small style="color: #666; font-size: 0.8rem;">Create at programmablesearchengine.google.com</small>
+                </div>
+                <div class="input-group">
+                    <label>Proxycurl API Key (Paid, $0.01/lookup)</label>
+                    <input type="text" id="proxycurlKey" placeholder="Bearer ..." value="">
+                    <small style="color: #666; font-size: 0.8rem;">For education/expertise enrichment (optional)</small>
+                </div>
+            </div>
+            <div class="info-note" style="margin-top: 15px;">
+                <strong>Note:</strong> Without Proxycurl, only basic profile links and names will be retrieved. 
+                LinkedIn blocks direct scraping - enrichment services are required for education/domain data.
+            </div>
+        </div>
+
+        <div class="search-panel">
+            <header>
+                <h1>LinkedIn Real-Time Matcher</h1>
+                <p>Search USA-based professionals with verified LinkedIn profiles</p>
+            </header>
+
+            <div class="names-grid">
+                <input type="text" class="name-input" id="name1" placeholder="First Name *" required>
+                <input type="text" class="name-input" id="name2" placeholder="Second Name *" required>
+                <input type="text" class="name-input" id="name3" placeholder="Third Name (Optional)">
+            </div>
+
+            <div id="validationMsg" class="status error">
+                Please enter at least 2 names to search
+            </div>
+
+            <div class="filters">
+                <div class="filter-section">
+                    <h3>Education Level (Optional)</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="bachelor" id="eduBsc">
+                            <span>Bachelor's (BSc/BA)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="master" id="eduMs">
+                            <span>Master's (MS/MBA)</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" value="phd" id="eduPhd">
+                            <span>PhD / Doctorate</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Domain Expertise (Optional)</h3>
+                    <input type="text" class="tag-input" id="domainInput" placeholder="Type domain (e.g., Mathematics) and press Enter">
+                    <div class="domain-tags" id="domainTags"></div>
+                </div>
+            </div>
+
+            <button class="search-btn" id="searchBtn" onclick="startSearch()">
+                <span>🔍 Search Real LinkedIn Profiles</span>
+            </button>
+            
+            <div id="statusMsg" class="status"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Searching Google Index for LinkedIn profiles...</p>
+            <p style="font-size: 0.9rem; opacity: 0.8;" id="loadingDetail"></p>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h2>Search Results</h2>
+                <span id="resultCount" style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;">0 found</span>
+            </div>
+            <div id="resultsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedDomains = new Set();
+
+        // Domain tag management
+        document.getElementById('domainInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                e.preventDefault();
+                const domain = this.value.trim();
+                if (!selectedDomains.has(domain)) {
+                    selectedDomains.add(domain);
+                    renderDomains();
+                }
+                this.value = '';
+            }
+        });
+
+        function renderDomains() {
+            const container = document.getElementById('domainTags');
+            container.innerHTML = Array.from(selectedDomains).map(d => `
+                <span class="tag">
+                    ${d}
+                    <span class="remove" onclick="removeDomain('${d}')">&times;</span>
+                </span>
+            `).join('');
+        }
+
+        function removeDomain(domain) {
+            selectedDomains.delete(domain);
+            renderDomains();
+        }
+
+        function validate() {
+            const n1 = document.getElementById('name1').value.trim();
+            const n2 = document.getElementById('name2').value.trim();
+            const n3 = document.getElementById('name3').value.trim();
+            
+            const filled = [n1, n2, n3].filter(n => n).length;
+            const msg = document.getElementById('validationMsg');
+            const btn = document.getElementById('searchBtn');
+            
+            if (filled < 2) {
+                msg.style.display = 'block';
+                btn.disabled = true;
+                return false;
+            } else {
+                msg.style.display = 'none';
+                btn.disabled = false;
+                return true;
+            }
+        }
+
+        ['name1', 'name2', 'name3'].forEach(id => {
+            document.getElementById(id).addEventListener('input', validate);
+        });
+
+        validate();
+
+        async function startSearch() {
+            if (!validate()) return;
+
+            const googleKey = document.getElementById('googleApiKey').value.trim();
+            const engineId = document.getElementById('searchEngineId').value.trim();
+            
+            if (!googleKey || !engineId) {
+                showStatus('Please configure Google Custom Search API keys above', 'error');
+                return;
+            }
+
+            const names = [
+                document.getElementById('name1').value.trim(),
+                document.getElementById('name2').value.trim(),
+                document.getElementById('name3').value.trim()
+            ].filter(n => n);
+
+            const education = [];
+            if (document.getElementById('eduBsc').checked) education.push('bachelor');
+            if (document.getElementById('eduMs').checked) education.push('master');
+            if (document.getElementById('eduPhd').checked) education.push('phd');
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('loadingDetail').textContent = `Searching for: ${names.join(', ')}`;
+
+            try {
+                // Step 1: Search Google for LinkedIn profiles
+                const profiles = await searchLinkedInProfiles(names, googleKey, engineId);
+                
+                if (profiles.length === 0) {
+                    showStatus('No LinkedIn profiles found for these name combinations', 'error');
+                    return;
+                }
+
+                // Step 2: Enrich with Proxycurl if available
+                const proxyKey = document.getElementById('proxycurlKey').value.trim();
+                if (proxyKey) {
+                    document.getElementById('loadingDetail').textContent = 'Enriching profiles with education/expertise data...';
+                    for (let profile of profiles) {
+                        try {
+                            const enriched = await enrichProfile(profile.link, proxyKey);
+                            profile.education = enriched.education || [];
+                            profile.expertise = enriched.expertise || [];
+                            profile.headline = enriched.headline || profile.snippet;
+                        } catch (e) {
+                            console.error('Enrichment failed:', e);
+                        }
+                    }
+                }
+
+                // Step 3: Filter results
+                const filtered = filterResults(profiles, education, Array.from(selectedDomains));
+                
+                displayResults(filtered);
+                
+            } catch (error) {
+                showStatus('Error: ' + error.message, 'error');
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        async function searchLinkedInProfiles(names, apiKey, engineId) {
+            // Construct search query: "Name1 Name2 Name3" site:linkedin.com/in USA
+            const nameQuery = names.join(' ');
+            const query = `"${nameQuery}" site:linkedin.com/in "United States" OR "USA" OR "San Francisco" OR "New York"`;
+            
+            const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${engineId}&q=${encodeURIComponent(query)}&num=10`;
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Google API error: ' + response.status);
+            
+            const data = await response.json();
+            
+            if (!data.items) return [];
+            
+            return data.items.map(item => ({
+                name: extractName(item.title),
+                link: item.link,
+                snippet: item.snippet,
+                education: [],
+                expertise: []
+            })).filter(p => p.name); // Filter out results without extractable names
+        }
+
+        function extractName(title) {
+            // LinkedIn titles usually format as: "Name - Title | LinkedIn"
+            const match = title.match(/^([A-Za-z\s]+)(?:\s[-–|]\s|\.)/);
+            return match ? match[1].trim() : title.replace(' | LinkedIn', '').trim();
+        }
+
+        async function enrichProfile(linkedinUrl, apiKey) {
+            // Using Proxycurl API (reverse-engineered LinkedIn data)
+            const proxyUrl = `https://nubela.co/proxycurl/api/v2/linkedin?url=${encodeURIComponent(linkedinUrl)}`;
+            
+            const response = await fetch(proxyUrl, {
+                headers: {
+                    'Authorization': apiKey.startsWith('Bearer') ? apiKey : `Bearer ${apiKey}`
+                }
+            });
+            
+            if (!response.ok) throw new Error('Proxycurl API error');
+            
+            const data = await response.json();
+            
+            return {
+                headline: data.occupation || data.headline,
+                education: (data.education || []).map(edu => ({
+                    school: edu.school,
+                    degree: edu.degree_name,
+                    field: edu.field_of_study,
+                    level: detectEducationLevel(edu.degree_name)
+                })),
+                expertise: data.skills || []
+            };
+        }
+
+        function detectEducationLevel(degree) {
+            if (!degree) return 'unknown';
+            const d = degree.toLowerCase();
+            if (d.includes('phd') || d.includes('doctorate') || d.includes('ph.d')) return 'phd';
+            if (d.includes('master') || d.includes('ms ') || d.includes('ma ') || d.includes('mba')) return 'master';
+            if (d.includes('bachelor') || d.includes('bs ') || d.includes('ba ')) return 'bachelor';
+            return 'unknown';
+        }
+
+        function filterResults(profiles, requiredEducation, requiredDomains) {
+            return profiles.filter(profile => {
+                // Education filter
+                if (requiredEducation.length > 0 && profile.education.length > 0) {
+                    const hasLevel = profile.education.some(edu => 
+                        requiredEducation.includes(edu.level)
+                    );
+                    if (!hasLevel) return false;
+                }
+                
+                // Domain filter
+                if (requiredDomains.length > 0) {
+                    const profileText = (profile.expertise.join(' ') + ' ' + 
+                        profile.education.map(e => e.field).join(' ')).toLowerCase();
+                    const hasDomain = requiredDomains.some(domain => 
+                        profileText.includes(domain.toLowerCase())
+                    );
+                    if (!hasDomain) return false;
+                }
+                
+                return true;
+            });
+        }
+
+        function displayResults(profiles) {
+            const container = document.getElementById('resultsContainer');
+            const list = document.getElementById('resultsList');
+            const count = document.getElementById('resultCount');
+            
+            count.textContent = `${profiles.length} profile${profiles.length !== 1 ? 's' : ''} found`;
+            
+            if (profiles.length === 0) {
+                list.innerHTML = '<div class="error-card">No profiles match your education/domain criteria. Try removing some filters.</div>';
+            } else {
+                list.innerHTML = profiles.map(profile => {
+                    const eduHtml = profile.education.length > 0 
+                        ? profile.education.map(edu => `
+                            <div class="education-item">
+                                ${edu.school || 'Unknown School'}
+                                ${edu.degree ? `<span class="education-level level-${edu.level}">${edu.degree}</span>` : ''}
+                                ${edu.field ? `<div style="font-size: 0.85rem; color: #666; margin-top: 2px;">${edu.field}</div>` : ''}
+                            </div>
+                        `).join('')
+                        : '<div class="education-item" style="color: #9ca3af;">Education data not available</div>';
+                    
+                    const domainHtml = profile.expertise.length > 0
+                        ? profile.expertise.slice(0, 5).map(dom => `
+                            <div class="domain-item">${dom}</div>
+                        `).join('')
+                        : '<div class="domain-item" style="color: #9ca3af;">Domain data requires Proxycurl API</div>';
+                    
+                    return `
+                        <div class="profile-card">
+                            <div class="profile-header">
+                                <div>
+                                    <div class="profile-name">${profile.name}</div>
+                                    <div class="profile-headline">${profile.headline || 'Professional'}</div>
+                                    <div class="profile-location">🔗 ${profile.link.replace('https://', '')}</div>
+                                </div>
+                                <a href="${profile.link}" target="_blank" class="linkedin-link">
+                                    View Profile ↗
+                                </a>
+                            </div>
+                            <div class="profile-details">
+                                <div>
+                                    <h4>Education</h4>
+                                    ${eduHtml}
+                                </div>
+                                <div>
+                                    <h4>Domain Expertise</h4>
+                                    ${domainHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            container.style.display = 'block';
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showStatus(msg, type) {
+            const el = document.getElementById('statusMsg');
+            el.textContent = msg;
+            el.className = 'status ' + type;
+            setTimeout(() => el.className = 'status', 5000);
+        }
+    </script>
+</body>
+</html>
